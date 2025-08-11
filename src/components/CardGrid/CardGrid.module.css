@@ -1,0 +1,7 @@
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--min-col, 200px), 1fr));
+  gap: var(--gap, 16px);
+  align-items: stretch; /* 카드 높이 균일하게 */
+}
+
