@@ -1,33 +1,77 @@
-interface 
+import { throttle } from "@/utils/throttle";
+import { useCallback, useEffect, useRef } from "react";
 
+type OnIntersect = () => void;
 
-export function useInfinityScroll() {
+interface ParamsType {
+  onIntersect: () => void;
+  root?: Element | null;
+  rootMargin?: string;
+  threshold?: number | number[];
+  disabled?: boolean;
+}
 
-  // 옵저버 콜백 Ref
-  const observerRef = useCallback(
-    (node: HTMLLIElement | null) => {
-      if (topObserverRef.current) {
-        topObserverRef.current.disconnect();
+export function useInfiniteScroll({
+  onIntersect,
+  root = null,
+  rootMargin = "0px",
+  threshold = 0.1,
+  disabled = false,
+}: ParamsType) {
+  // 콜백 최신화
+  const onIntersectRef = useRef<OnIntersect>(onIntersect);
+  const observerRef = useRef<IntersectionObserver | null>(null);
+
+  useEffect(() => {
+    onIntersectRef.current = onIntersect;
+  }, [onIntersect]);
+
+  const throttleCallRef = useRef<() => void>(null);
+  useEffect(() => {
+    throttleCallRef.current = throttle(() => {
+      onIntersectRef.current();
+    }, 200)
+  }, [])
+
+  // 옵저버 setting 콜백 
+  const setObserverCallback = useCallback(
+    (node: HTMLElement | null) => {
+      // 옵저버가 이미 존재한다면 정리
+      if (observerRef.current) {
+        observerRef.current.disconnect();
+        observerRef.current = null;
       }
 
-      topObserverRef.current = new IntersectionObserver(
+      if (disabled || !node) return;
+
+      if (
+        typeof window === "undefined" ||
+        typeof IntersectionObserver !== "function"
+      ) {
+        console.log('스크롤 옵저버를 로드할 수 없습니다.')
+        return;
+      }
+
+      observerRef.current = new IntersectionObserver(
         ([entry]) => {
-          if (
-            entry.isIntersecting &&
-            !observerStateRef.current.isTopFetching &&
-            observerStateRef.current.hasMoreHeadFeeds
-          ) {
-            setIsTopFetching(true);
-            renderHeadFeeds().finally(() => setIsTopFetching(false));
+          if (entry.isIntersecting) {
+            throttleCallRef.current?.()
           }
         },
-        { threshold: 0.1 }
+        { threshold, root, rootMargin }
       );
 
       if (node) {
-        topObserverRef.current.observe(node);
+        observerRef.current.observe(node);
       }
     },
+    [root, rootMargin, threshold, disabled]
   );
 
+  // 언마운트시 이벤트를 삭제
+  useEffect(() => {
+    return () => observerRef.current?.disconnect();
+  }, []);
+
+  return { setObserverCallback, observerRef };
 }
