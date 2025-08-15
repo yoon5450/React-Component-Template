@@ -5,7 +5,7 @@ type OnIntersect = () => void;
 
 interface ParamsType {
   onIntersect: () => void;
-  root?: Element | null;
+  root?: Element | Document | null;
   rootMargin?: string;
   threshold?: number | number[];
   disabled?: boolean;
@@ -21,26 +21,29 @@ export function useInfiniteScroll({
   // 콜백 최신화
   const onIntersectRef = useRef<OnIntersect>(onIntersect);
   const observerRef = useRef<IntersectionObserver | null>(null);
+  const lastNodeRef = useRef<Element | null>(null);
+  const throttleCallRef = useRef<() => void | null>(null);
 
   useEffect(() => {
     onIntersectRef.current = onIntersect;
   }, [onIntersect]);
 
-  const throttleCallRef = useRef<() => void>(null);
   useEffect(() => {
     throttleCallRef.current = throttle(() => {
       onIntersectRef.current();
-    }, 200)
-  }, [])
+    }, 200);
+  }, []);
 
-  // 옵저버 setting 콜백 
+  // 옵저버 setting 콜백
   const setObserverCallback = useCallback(
-    (node: HTMLElement | null) => {
+    (node: Element | null) => {
       // 옵저버가 이미 존재한다면 정리
       if (observerRef.current) {
         observerRef.current.disconnect();
         observerRef.current = null;
       }
+
+      lastNodeRef.current = node;
 
       if (disabled || !node) return;
 
@@ -48,14 +51,14 @@ export function useInfiniteScroll({
         typeof window === "undefined" ||
         typeof IntersectionObserver !== "function"
       ) {
-        console.log('스크롤 옵저버를 로드할 수 없습니다.')
+        console.log("스크롤 옵저버를 로드할 수 없습니다.");
         return;
       }
 
       observerRef.current = new IntersectionObserver(
         ([entry]) => {
           if (entry.isIntersecting) {
-            throttleCallRef.current?.()
+            throttleCallRef.current?.();
           }
         },
         { threshold, root, rootMargin }
@@ -73,5 +76,15 @@ export function useInfiniteScroll({
     return () => observerRef.current?.disconnect();
   }, []);
 
-  return { setObserverCallback, observerRef };
+  const pause = useCallback(() => {
+    observerRef.current?.disconnect();
+  }, []);
+
+  const resume = useCallback(() => {
+    const node = lastNodeRef.current;
+    if(!node || disabled) return;
+    setObserverCallback(node)
+  }, [disabled, setObserverCallback]);
+
+  return { setObserverCallback, observerRef, pause, resume };
 }
