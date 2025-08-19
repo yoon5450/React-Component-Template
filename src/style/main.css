@@ -1,3 +1,4 @@
-@import './_reset.css';
+/* @import './_reset.css'; */
 @import './_scroll.css';
 @import './_token.css';
+@import './_tailwind.css'

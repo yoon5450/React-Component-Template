@@ -1,5 +1,7 @@
 import Card from "@/components/Card";
+import CardTailwind from "@/components/CardTailwind";
 import CardGrid from "@/components/CardGrid/CardGrid";
+import Footer from "@/components/Layout/Footer";
 import PillButton from "@/components/PillButton";
 
 function index() {
@@ -57,6 +59,10 @@ function index() {
           linkSrc="http://aaa.com"
         /></li>
       </CardGrid>
+
+      <CardTailwind desc="테스트" title="text" type="default" linkSrc="/vite.svg"/>
+
+      <Footer />
     </div>
   );
 }

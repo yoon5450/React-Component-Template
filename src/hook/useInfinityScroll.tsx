@@ -19,6 +19,7 @@ export function useInfiniteScroll({
   disabled = false,
 }: ParamsType) {
   // 콜백 최신화
+  const isIntersectingRef = useRef(false);
   const onIntersectRef = useRef<OnIntersect>(onIntersect);
   const observerRef = useRef<IntersectionObserver | null>(null);
   const lastNodeRef = useRef<Element | null>(null);
@@ -57,6 +58,8 @@ export function useInfiniteScroll({
 
       observerRef.current = new IntersectionObserver(
         ([entry]) => {
+          isIntersectingRef.current = entry.isIntersecting;
+
           if (entry.isIntersecting) {
             throttleCallRef.current?.();
           }
@@ -82,9 +85,11 @@ export function useInfiniteScroll({
 
   const resume = useCallback(() => {
     const node = lastNodeRef.current;
-    if(!node || disabled) return;
-    setObserverCallback(node)
+    if (!node || disabled) return;
+    setObserverCallback(node);
   }, [disabled, setObserverCallback]);
 
-  return { setObserverCallback, observerRef, pause, resume };
+  const getIsIntersecting = useCallback(() => isIntersectingRef.current, []);
+
+  return { setObserverCallback, getIsIntersecting, pause, resume };
 }
